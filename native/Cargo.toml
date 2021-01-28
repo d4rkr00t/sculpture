@@ -1,0 +1,18 @@
+[package]
+name = "sculpture"
+version = "0.1.0"
+authors = ["Stanislav Sysoev <d4rkr00t@gmail.com>"]
+license = "MIT"
+build = "build.rs"
+edition = "2018"
+exclude = ["artifacts.json", "index.node"]
+
+[lib]
+name = "sculpture"
+crate-type = ["cdylib"]
+
+[build-dependencies]
+neon-build = "0.7.0"
+
+[dependencies]
+neon = "0.7.0"
