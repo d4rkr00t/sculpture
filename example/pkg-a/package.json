@@ -1,3 +1,4 @@
 {
-  "name": "pkg-a"
+  "name": "pkg-a",
+  "description": "hello"
 }

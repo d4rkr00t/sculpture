@@ -7,5 +7,8 @@ const addon = require("../../native");
  * @usage {cliName} inputs --param1 10 --param2 20
  */
 export default async function main() {
-  addon.hello(process.cwd());
+  addon.hello(process.cwd(), () => {
+    console.log("called from rust");
+    return { name: "hello" };
+  });
 }

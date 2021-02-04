@@ -1,3 +1,4 @@
+use super::file::File;
 use super::package_json::PackageJson;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -8,7 +9,7 @@ pub struct Workspace {
     pub name: String,
     pub path: String,
     pub dependencies: HashMap<String, String>,
-    pub files: Vec<String>,
+    pub files: Vec<File>,
 }
 
 impl Workspace {
@@ -23,7 +24,17 @@ impl Workspace {
                 .to_owned(),
             name: pkg_json.name,
             dependencies: pkg_json.dependencies,
-            files: vec![path],
+            files: vec![File::new(path)],
         }
+    }
+
+    pub fn invalidate(&self) -> bool {
+        for file in &self.files {
+            if file.hash != File::new(file.path.clone()).hash {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
