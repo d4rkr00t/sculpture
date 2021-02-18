@@ -1,0 +1,16 @@
+{
+  "name": "sculpture-cli-linux-x64-gnu",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "sculpture-cli.linux-x64-gnu.node",
+  "files": [
+    "sculpture-cli.linux-x64-gnu.node"
+  ],
+  "engines": {
+    "node": ">= 10"
+  }
+}
