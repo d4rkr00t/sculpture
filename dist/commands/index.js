@@ -12,7 +12,7 @@ const { loadBinding } = require("@node-rs/helper");
  * `loadBinding` helper will load `sculpture-cli.[PLATFORM].node` from `__dirname` first
  * If failed to load addon, it will fallback to load from `sculpture-cli-[PLATFORM]`
  */
-let native = loadBinding(
+let { Runner } = loadBinding(
   path.join(__dirname, "..", ".."),
   "sculpture-cli",
   "sculpture-cli"
@@ -25,7 +25,8 @@ let native = loadBinding(
  * @usage {cliName} inputs --param1 10 --param2 20
  */
 async function main() {
-  console.log(native.sync(10));
+  let runner = new Runner();
+  runner.run(10);
 }
 
 module.exports = main;
