@@ -1,6 +1,5 @@
 import { join } from "path";
-const { loadBinding } = require("@node-rs/helper");
-
+import tsPlugin from "./plugins/typescript";
 /**
  * __dirname means load native addon from current dir
  * 'sculpture-cli' is the name of native addon
@@ -9,11 +8,13 @@ const { loadBinding } = require("@node-rs/helper");
  * `loadBinding` helper will load `sculpture-cli.[PLATFORM].node` from `__dirname` first
  * If failed to load addon, it will fallback to load from `sculpture-cli-[PLATFORM]`
  */
-let { Runner } = loadBinding(
+let { loadBinding } = require("@node-rs/helper");
+let { Orchestrator } = loadBinding(
   join(__dirname, "..", ".."),
   "sculpture-cli",
   "sculpture-cli"
 );
+let plugins = [tsPlugin];
 
 /**
  * Use JSDoc comments to define help and parameters for a CLI.
@@ -22,6 +23,37 @@ let { Runner } = loadBinding(
  * @usage {cliName} inputs --param1 10 --param2 20
  */
 export default async function main() {
-  let runner = new Runner();
-  runner.run(10);
+  let start = Date.now();
+
+  await run();
+
+  let timing = (Date.now() - start) / 1000;
+  let rounded = Math.round(timing * 100) / 100;
+  console.log(`🏁  Done in ${rounded}s.`);
+  process.exit(0);
+}
+
+function run() {
+  return new Promise((resolve) => {
+    let orchestrator = new Orchestrator({
+      cwd: process.cwd(),
+      onFinish() {
+        resolve(undefined);
+      },
+      async onResolveInputs(_err: unknown, id: string, wsPath: string) {
+        // console.log("Resolving files for: ", { id, wsPath });
+        let files = Array.from(
+          new Set(
+            plugins.flatMap((plugin) => {
+              if (!plugin.inputResolver) return [];
+              return plugin.inputResolver(wsPath);
+            })
+          )
+        );
+        orchestrator.onCompleteJsTask(id, JSON.stringify(files));
+      },
+    });
+
+    orchestrator.run(10);
+  });
 }

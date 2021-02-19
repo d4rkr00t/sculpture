@@ -7,8 +7,14 @@ version = "0.0.0"
 crate-type = ["cdylib"]
 
 [dependencies]
-napi = "1"
+napi = {version = "1", features=["napi4"]}
 napi-derive = "1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+glob = "0.3.0"
+async-std = "1.9.0"
+futures = "0.3.12"
+sha-1 = "0.7.0"
 
 [build-dependencies]
 napi-build = "1"
