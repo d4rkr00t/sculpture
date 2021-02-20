@@ -41,15 +41,16 @@ function run() {
         resolve(undefined);
       },
       async onResolveInputs(_err: unknown, id: string, wsPath: string) {
-        // console.log("Resolving files for: ", { id, wsPath });
+        let promises = plugins.reduce((acc, plugin) => {
+          if (!plugin.inputResolver) return acc;
+          acc.push(plugin.inputResolver(wsPath));
+          return acc;
+        }, [] as Array<Promise<Array<String>>>);
+
         let files = Array.from(
-          new Set(
-            plugins.flatMap((plugin) => {
-              if (!plugin.inputResolver) return [];
-              return plugin.inputResolver(wsPath);
-            })
-          )
+          new Set((await Promise.all(promises)).flatMap((file) => file))
         );
+
         orchestrator.onCompleteJsTask(id, JSON.stringify(files));
       },
     });

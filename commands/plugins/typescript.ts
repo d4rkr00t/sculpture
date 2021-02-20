@@ -1,10 +1,10 @@
-import { statSync } from "fs";
+import { promises } from "fs";
 import { join } from "path";
 import fg from "fast-glob";
 
-function exist(file_path: string) {
+async function exist(file_path: string) {
   try {
-    let stats = statSync(file_path);
+    let stats = await promises.stat(file_path);
     return stats.isFile;
   } catch {
     return false;
@@ -12,15 +12,15 @@ function exist(file_path: string) {
 }
 
 const tsPlugin = {
-  inputResolver(ws: string): string[] {
+  async inputResolver(ws: string): Promise<string[]> {
     let tsconfigPath = join(ws, "tsconfig.json");
-    if (!exist(tsconfigPath)) {
+    if (await !exist(tsconfigPath)) {
       return [];
     }
 
     try {
       let tsconfig = require(tsconfigPath);
-      let glob_inputs = fg.sync(tsconfig.include ?? [], {
+      let glob_inputs = await fg(tsconfig.include ?? [], {
         ignore: [...(tsconfig.exclude ?? []), "node_modules"],
         dot: true,
         cwd: ws,
