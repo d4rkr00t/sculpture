@@ -16,8 +16,6 @@ pub type WorkspaceFiles = HashMap<String, File>;
 impl Workspace {
     pub fn new(path: String) -> Self {
         let pkg_json = PackageJson::new(&path);
-        let mut files = HashMap::new();
-        files.insert(path.clone(), File::new(path.clone()));
         Self {
             path: Path::new(&path)
                 .parent()
@@ -26,7 +24,7 @@ impl Workspace {
                 .unwrap()
                 .to_owned(),
             name: pkg_json.name,
-            files,
+            files: HashMap::new(),
         }
     }
 

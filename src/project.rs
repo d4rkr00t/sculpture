@@ -54,13 +54,18 @@ impl Project {
         on_resolve: ThreadsafeFunction<Vec<String>>,
         async_tasks: &JsTasksMap,
     ) -> Vec<Workspace> {
-        let keys: Vec<String> = self.workspaces.keys().cloned().collect();
+        let workspaces_list = get_workspaces(&self.path, self.pkg_json.get_workspaces_config());
         let mut future_list = FuturesUnordered::new();
 
-        for ws_key in keys {
+        for cur_ws in workspaces_list {
+            let ws = if self.workspaces.contains_key(&cur_ws.name) {
+                self.workspaces.get(&cur_ws.name).unwrap().clone()
+            } else {
+                cur_ws.clone()
+            };
+
             let mut map = async_tasks.write().expect("RwLock poisoned");
-            let task = JsTask::new(format!("{}:{}", ws_key, "resolve_inputs"));
-            let ws = self.workspaces.get(&ws_key).unwrap();
+            let task = JsTask::new(format!("{}:{}", ws.name, "resolve_inputs"));
             let state_clone = task.state.clone();
             let on_resolve_clone = on_resolve.try_clone().unwrap();
             map.insert(task.id.clone(), task.state.clone());

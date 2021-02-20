@@ -1,0 +1,6 @@
+{
+  "name": "pkg-d",
+  "dependencies": {
+    "pkg-a": "0.0.0"
+  }
+}
