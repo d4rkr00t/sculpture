@@ -53,7 +53,7 @@ impl Project {
         &self,
         on_resolve: ThreadsafeFunction<Vec<String>>,
         async_tasks: &JsTasksMap,
-    ) -> Vec<Workspace> {
+    ) -> (Vec<Workspace>, Vec<String>) {
         let workspaces_list = get_workspaces(&self.path, self.pkg_json.get_workspaces_config());
         let mut future_list = FuturesUnordered::new();
 
@@ -87,8 +87,9 @@ impl Project {
                     if is_dirty {
                         let mut new_ws = ws.clone();
                         new_ws.set_files(new_files);
-                        return Some(new_ws);
+                        return Some((true, new_ws));
                     }
+                    return Some((false, ws));
                 }
 
                 return None;
@@ -98,16 +99,25 @@ impl Project {
         }
 
         let mut result_workspaces: Vec<Workspace> = vec![];
+        let mut updated_workspaces: Vec<String> = vec![];
 
         task::block_on(async {
             while let Some(workspaces) = future_list.next().await {
-                if let Some(ws) = workspaces {
-                    result_workspaces.push(ws);
+                match workspaces {
+                    Some((true, ws)) => {
+                        // TODO: only name is good enough here
+                        updated_workspaces.push(ws.name.to_owned());
+                        result_workspaces.push(ws);
+                    }
+                    Some((false, ws)) => {
+                        result_workspaces.push(ws);
+                    }
+                    None => {}
                 }
             }
         });
 
-        result_workspaces
+        (result_workspaces, updated_workspaces)
     }
 }
 

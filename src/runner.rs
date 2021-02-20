@@ -64,16 +64,18 @@ pub fn run(
             .read()
             .expect("[runner:run] Couldn't lock read access to a project");
 
-        let updated = project.invalidate(shared_on_resolve_clone, &shared_async_tasks_clone);
+        let (workspaces, updated) =
+            project.invalidate(shared_on_resolve_clone, &shared_async_tasks_clone);
         drop(project);
 
-        println!("Updated workspaces: {}", updated.len());
+        println!("Updated workspaces: {:?}", updated);
 
         let mut project = shared_project_clone
             .write()
             .expect("[runner:run] Couldn't lock read access to a project");
 
-        for ws in updated {
+        project.workspaces = HashMap::new();
+        for ws in workspaces {
             project.workspaces.insert(ws.name.to_owned(), ws);
         }
 

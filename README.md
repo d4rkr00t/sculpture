@@ -1,7 +1,7 @@
 ## TODO LIST
 
 - [x] Project new workspaces
-- [] Project deleted workspaces
+- [x] Project deleted workspaces
 - [] Dependency graph
   - [] Graph Viz output
 - [] Logger
