@@ -32,22 +32,30 @@ impl Workspace {
         self.files = files;
     }
 
-    pub fn invalidate(&self, mut resolved_inputs: Vec<String>) -> (bool, WorkspaceFiles) {
+    pub async fn invalidate(&self, mut resolved_inputs: Vec<String>) -> (bool, WorkspaceFiles) {
         let mut new_files: WorkspaceFiles = HashMap::new();
         let mut is_dirty = false;
         resolved_inputs.push(format!("{}/package.json", self.path));
 
         for file_path in resolved_inputs {
-            if !self.files.contains_key(&file_path) {
-                is_dirty = true;
-                new_files.insert(file_path.clone(), File::new(file_path));
-            } else {
-                let new_file = File::new(file_path.clone());
-                if self.files.get(&file_path).unwrap().hash != new_file.hash {
-                    is_dirty = true;
+            let (dirty, new_file) = async {
+                let new_file = File::new_async(file_path.clone()).await;
+                if !self.files.contains_key(&file_path) {
+                    return (true, new_file);
+                } else {
+                    let mut is_dirty = false;
+                    if self.files.get(&file_path).unwrap().hash != new_file.hash {
+                        is_dirty = true;
+                    }
+                    return (is_dirty, new_file);
                 }
-                new_files.insert(file_path, new_file);
             }
+            .await;
+
+            if !is_dirty {
+                is_dirty = dirty;
+            }
+            new_files.insert(new_file.path.clone(), new_file);
         }
 
         (is_dirty, new_files)

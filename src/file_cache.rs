@@ -26,7 +26,6 @@ impl FileCache {
     }
 
     pub fn has(&self, file_name: &str) -> bool {
-        // return false;
         Path::new(&self.get_cache_file_path(file_name)).exists()
     }
 

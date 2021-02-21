@@ -82,8 +82,7 @@ impl Project {
                 let state = state_clone.lock().unwrap();
                 if let Some(data) = &state.data {
                     let files: Vec<String> = serde_json::from_str(data).unwrap();
-                    // println!("Files: {:?}", files);
-                    let (is_dirty, new_files) = ws.invalidate(files);
+                    let (is_dirty, new_files) = ws.invalidate(files).await;
                     if is_dirty {
                         let mut new_ws = ws.clone();
                         new_ws.set_files(new_files);
@@ -105,7 +104,6 @@ impl Project {
             while let Some(workspaces) = future_list.next().await {
                 match workspaces {
                     Some((true, ws)) => {
-                        // TODO: only name is good enough here
                         updated_workspaces.push(ws.name.to_owned());
                         result_workspaces.push(ws);
                     }
@@ -122,31 +120,19 @@ impl Project {
 }
 
 fn get_workspaces(path: &str, workspaces_config: &[String]) -> Vec<Workspace> {
-    let mut future_list = FuturesUnordered::new();
-
-    for ws in workspaces_config {
-        let fut = async move {
-            let mut res = vec![];
-            for entry in
-                glob(&format!("{}/{}/package.json", path, ws)).expect("Failed to read glob pattern")
-            {
-                match entry {
-                    Ok(p) => res.push(Workspace::new(p.into_os_string().into_string().unwrap())),
-                    Err(e) => println!("{:?}", e),
-                }
-            }
-            return res;
-        };
-        future_list.push(fut);
-    }
-
     let mut result_workspaces: Vec<Workspace> = vec![];
 
-    task::block_on(async {
-        while let Some(mut workspaces) = future_list.next().await {
-            result_workspaces.append(&mut workspaces);
+    for ws in workspaces_config {
+        for entry in
+            glob(&format!("{}/{}/package.json", path, ws)).expect("Failed to read glob pattern")
+        {
+            match entry {
+                Ok(p) => result_workspaces
+                    .push(Workspace::new(p.into_os_string().into_string().unwrap())),
+                Err(e) => println!("{:?}", e),
+            }
         }
-    });
+    }
 
     result_workspaces
 }
