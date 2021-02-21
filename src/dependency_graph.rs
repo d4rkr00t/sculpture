@@ -36,7 +36,50 @@ impl DepGraph {
             }
         }
 
-        affected_workspaces.into_iter().collect()
+        self.top_sort(affected_workspaces.into_iter().collect())
+    }
+
+    fn top_sort(&self, workspaces: HashSet<String>) -> Vec<String> {
+        fn dfs(
+            cur: &str,
+            graph: &DepMap,
+            workspaces: &HashSet<String>,
+            visited: &mut HashSet<String>,
+            sorted: &mut Vec<String>,
+        ) {
+            visited.insert(cur.to_owned());
+            if !graph.contains_key(cur) {
+                sorted.push(cur.to_owned());
+                return;
+            }
+
+            for dep in graph.get(cur).unwrap() {
+                if workspaces.contains(dep) && !visited.contains(dep) {
+                    dfs(dep, graph, workspaces, visited, sorted);
+                }
+            }
+
+            sorted.push(cur.to_owned())
+        }
+
+        let mut sorted_workspaces: Vec<String> = vec![];
+        let mut visited: HashSet<String> = HashSet::new();
+
+        for ws in &workspaces {
+            if visited.contains(ws) {
+                continue;
+            }
+
+            dfs(
+                ws,
+                &self.direct,
+                &workspaces,
+                &mut visited,
+                &mut sorted_workspaces,
+            );
+        }
+
+        sorted_workspaces
     }
 
     fn build_direct_dep_graph(workspaces: &[Workspace]) -> DepMap {

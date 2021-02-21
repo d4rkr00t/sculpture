@@ -5,11 +5,11 @@
 - [ ] Dependency graph
   - [x] Direct and inverted Dep Graph
   - [x] Get affected
-  - [ ] Topological sort
-    - [ ] Affected topologically sorted
+  - [x] Topological sort
+    - [x] Affected topologically sorted
   - [ ] Validating dependencies
-    - [ ] All versions match
     - [ ] No cycles
+    - [ ] All versions match
   - [ ] Graph Viz output
 - [ ] Logger
   - https://nx.dev/latest/angular/getting-started/getting-started
