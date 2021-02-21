@@ -9,6 +9,7 @@ pub struct Workspace {
     pub name: String,
     pub path: String,
     pub files: WorkspaceFiles,
+    pub package_json: PackageJson,
 }
 
 pub type WorkspaceFiles = HashMap<String, File>;
@@ -17,14 +18,15 @@ impl Workspace {
     pub fn new(path: String) -> Self {
         let pkg_json = PackageJson::new(&path);
         Self {
+            name: pkg_json.name.clone(),
             path: Path::new(&path)
                 .parent()
                 .unwrap()
                 .to_str()
                 .unwrap()
                 .to_owned(),
-            name: pkg_json.name,
             files: HashMap::new(),
+            package_json: pkg_json,
         }
     }
 

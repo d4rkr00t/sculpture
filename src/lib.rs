@@ -1,5 +1,6 @@
 #![deny(clippy::all)]
 
+mod dependency_graph;
 mod file;
 mod file_cache;
 mod js_task;

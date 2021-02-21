@@ -6,6 +6,7 @@ use std::{
 
 use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
 
+use super::dependency_graph::DepGraph;
 use super::js_task::JsTasksMap;
 use super::project::Project;
 use super::FileCache;
@@ -79,6 +80,10 @@ pub fn run(
             project.workspaces.insert(ws.name.to_owned(), ws);
         }
 
+        let dep_graph = DepGraph::new(project.workspaces.values().cloned().collect());
+        println!("Dependency graph: {:#?}", dep_graph);
+
+        // CACHING
         let serialized = serde_json::to_string(&project as &Project).unwrap();
         cache.write("project.json", &serialized).unwrap();
 
