@@ -81,7 +81,10 @@ pub fn run(
         }
 
         let dep_graph = DepGraph::new(project.workspaces.values().cloned().collect());
-        println!("Dependency graph: {:#?}", dep_graph);
+        println!(
+            "Affected dependencies: {:#?}",
+            dep_graph.get_affected(updated)
+        );
 
         // CACHING
         let serialized = serde_json::to_string(&project as &Project).unwrap();
