@@ -33,8 +33,9 @@ impl Workspace {
         }
     }
 
-    pub fn set_files(&mut self, files: WorkspaceFiles) {
+    pub fn update(&mut self, files: WorkspaceFiles) {
         self.files = files;
+        self.package_json = PackageJson::new(&self.package_json.path);
     }
 
     pub fn invalidate(&self, mut resolved_inputs: Vec<String>) -> (bool, WorkspaceFiles) {

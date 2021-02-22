@@ -90,7 +90,7 @@ impl Project {
                     let (is_dirty, new_files) = ws.invalidate(files);
                     if is_dirty {
                         let mut new_ws = ws.clone();
-                        new_ws.set_files(new_files);
+                        new_ws.update(new_files);
                         return Some((true, new_ws));
                     }
                     return Some((false, ws));

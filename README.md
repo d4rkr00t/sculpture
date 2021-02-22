@@ -10,8 +10,9 @@
   - [ ] Validating dependencies
     - [x] No cycles
       - [ ] Fix ordering of a path with a cycle
-    - [ ] All versions match
+    - [x] All versions match
   - [ ] Graph Viz output
+- [x] Fix workspaces not getting updated
 - [ ] Logger
   - https://nx.dev/latest/angular/getting-started/getting-started
 - [ ] Sandboxing
