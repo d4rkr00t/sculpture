@@ -19,7 +19,7 @@ impl DepGraph {
         Self { direct, inversed }
     }
 
-    pub fn get_affected(&self, updated_workspaces: Vec<String>) -> Vec<String> {
+    pub fn get_affected(&self, updated_workspaces: Vec<String>) -> Result<Vec<String>, String> {
         let mut affected_workspaces = HashSet::new();
         let mut queue = VecDeque::from_iter(updated_workspaces);
 
@@ -39,47 +39,82 @@ impl DepGraph {
         self.top_sort(affected_workspaces.into_iter().collect())
     }
 
-    fn top_sort(&self, workspaces: HashSet<String>) -> Vec<String> {
+    fn top_sort(&self, workspaces: HashSet<String>) -> Result<Vec<String>, String> {
         fn dfs(
             cur: &str,
             graph: &DepMap,
             workspaces: &HashSet<String>,
             visited: &mut HashSet<String>,
+            path: &mut HashSet<String>,
             sorted: &mut Vec<String>,
-        ) {
-            visited.insert(cur.to_owned());
+        ) -> Result<(), String> {
+            if path.contains(cur) {
+                let mut path_vec = path.iter().collect::<Vec<&String>>();
+                let cur_copy = cur.to_owned();
+                path_vec.push(&cur_copy);
+                path_vec.reverse();
+                return Err(format!("Cycle detected: {:?}", path_vec));
+            }
+
+            path.insert(cur.to_owned());
+
             if !graph.contains_key(cur) {
+                visited.insert(cur.to_owned());
                 sorted.push(cur.to_owned());
-                return;
+                path.remove(cur);
+                return Ok(());
             }
 
             for dep in graph.get(cur).unwrap() {
                 if workspaces.contains(dep) && !visited.contains(dep) {
-                    dfs(dep, graph, workspaces, visited, sorted);
+                    match dfs(dep, graph, workspaces, visited, path, sorted) {
+                        Ok(_) => continue,
+                        Err(e) => return Err(e),
+                    }
                 }
             }
 
-            sorted.push(cur.to_owned())
+            visited.insert(cur.to_owned());
+            path.remove(cur);
+            sorted.push(cur.to_owned());
+
+            Ok(())
         }
 
         let mut sorted_workspaces: Vec<String> = vec![];
         let mut visited: HashSet<String> = HashSet::new();
+        let mut path: HashSet<String> = HashSet::new();
 
         for ws in &workspaces {
             if visited.contains(ws) {
                 continue;
             }
 
-            dfs(
+            match dfs(
                 ws,
                 &self.direct,
                 &workspaces,
                 &mut visited,
+                &mut path,
                 &mut sorted_workspaces,
-            );
+            ) {
+                Ok(_) => continue,
+                Err(e) => return Err(e),
+            }
         }
 
-        sorted_workspaces
+        Ok(sorted_workspaces)
+    }
+
+    pub fn validate(&self) -> bool {
+        let workspaces: HashSet<String> = self.direct.keys().cloned().collect();
+        match self.top_sort(workspaces) {
+            Ok(_) => true,
+            Err(e) => {
+                println!("{}", e);
+                false
+            }
+        }
     }
 
     fn build_direct_dep_graph(workspaces: &[Workspace]) -> DepMap {

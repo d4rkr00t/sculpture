@@ -8,7 +8,8 @@
   - [x] Topological sort
     - [x] Affected topologically sorted
   - [ ] Validating dependencies
-    - [ ] No cycles
+    - [x] No cycles
+      - [ ] Fix ordering of a path with a cycle
     - [ ] All versions match
   - [ ] Graph Viz output
 - [ ] Logger

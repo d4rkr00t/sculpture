@@ -10,6 +10,7 @@ use super::dependency_graph::DepGraph;
 use super::js_task::JsTasksMap;
 use super::project::Project;
 use super::FileCache;
+use std::time::Instant;
 
 pub struct Runner {
     pub cwd: String,
@@ -65,9 +66,12 @@ pub fn run(
             .read()
             .expect("[runner:run] Couldn't lock read access to a project");
 
+        print!("Invalidating deps... ");
+        let now = Instant::now();
         let (workspaces, updated) =
             project.invalidate(shared_on_resolve_clone, &shared_async_tasks_clone);
         drop(project);
+        println!("[{} ms]", now.elapsed().as_millis());
 
         println!("Updated workspaces: {:?}", updated);
 
@@ -80,15 +84,21 @@ pub fn run(
             project.workspaces.insert(ws.name.to_owned(), ws);
         }
 
+        println!("Building deps graph");
         let dep_graph = DepGraph::new(project.workspaces.values().cloned().collect());
-        println!(
-            "Affected dependencies: {:#?}",
-            dep_graph.get_affected(updated)
-        );
 
-        // CACHING
-        let serialized = serde_json::to_string(&project as &Project).unwrap();
-        cache.write("project.json", &serialized).unwrap();
+        println!("Validating deps graph");
+        if dep_graph.validate() {
+            println!("Calculating affected dependencies");
+            println!(
+                "Affected dependencies: {:#?}",
+                dep_graph.get_affected(updated)
+            );
+
+            // CACHING
+            let serialized = serde_json::to_string(&project as &Project).unwrap();
+            cache.write("project.json", &serialized).unwrap();
+        }
 
         shared_on_finish_clone.call(Ok(vec![]), ThreadsafeFunctionCallMode::NonBlocking);
     });
