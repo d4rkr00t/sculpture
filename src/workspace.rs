@@ -1,5 +1,8 @@
 use super::file::File;
 use super::package_json::PackageJson;
+use async_std::task;
+// use futures::future::join_all;
+use futures::stream::{FuturesUnordered, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -34,31 +37,32 @@ impl Workspace {
         self.files = files;
     }
 
-    pub async fn invalidate(&self, mut resolved_inputs: Vec<String>) -> (bool, WorkspaceFiles) {
+    pub fn invalidate(&self, mut resolved_inputs: Vec<String>) -> (bool, WorkspaceFiles) {
         let mut new_files: WorkspaceFiles = HashMap::new();
         let mut is_dirty = false;
+        let mut futures_list = FuturesUnordered::new();
         resolved_inputs.push(format!("{}/package.json", self.path));
 
         for file_path in resolved_inputs {
-            let (dirty, new_file) = async {
-                let new_file = File::new_async(file_path.clone()).await;
+            let fut = async move {
                 if !self.files.contains_key(&file_path) {
+                    let new_file = File::new(file_path.clone()).await;
                     return (true, new_file);
                 } else {
-                    let mut is_dirty = false;
-                    if self.files.get(&file_path).unwrap().hash != new_file.hash {
-                        is_dirty = true;
-                    }
-                    return (is_dirty, new_file);
+                    return self.files.get(&file_path).unwrap().invalidate().await;
                 }
-            }
-            .await;
-
-            if !is_dirty {
-                is_dirty = dirty;
-            }
-            new_files.insert(new_file.path.clone(), new_file);
+            };
+            futures_list.push(fut);
         }
+
+        task::block_on(async {
+            while let Some((dirty, new_file)) = futures_list.next().await {
+                if !is_dirty {
+                    is_dirty = dirty;
+                }
+                new_files.insert(new_file.path.clone(), new_file);
+            }
+        });
 
         (is_dirty, new_files)
     }

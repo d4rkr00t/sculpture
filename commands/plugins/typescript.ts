@@ -1,6 +1,7 @@
 import { promises } from "fs";
 import { join } from "path";
 import fg from "fast-glob";
+import ts from "typescript";
 
 async function exist(file_path: string) {
   try {
@@ -19,7 +20,8 @@ const tsPlugin = {
     }
 
     try {
-      let tsconfig = require(tsconfigPath);
+      let file = await promises.readFile(tsconfigPath, "utf8");
+      let tsconfig = ts.parseConfigFileTextToJson("tsconfig.json", file).config;
       let glob_inputs = await fg(tsconfig.include ?? [], {
         ignore: [...(tsconfig.exclude ?? []), "node_modules"],
         dot: true,

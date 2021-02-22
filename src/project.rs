@@ -8,6 +8,7 @@ use glob::glob;
 use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::time::Instant;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Project {
@@ -54,9 +55,14 @@ impl Project {
         on_resolve: ThreadsafeFunction<Vec<String>>,
         async_tasks: &JsTasksMap,
     ) -> (Vec<Workspace>, Vec<String>) {
+        print!("Creating a list of workspaces... ");
+        let ws_start = Instant::now();
         let workspaces_list = get_workspaces(&self.path, self.pkg_json.get_workspaces_config());
         let mut future_list = FuturesUnordered::new();
+        println!("[{} ms]", ws_start.elapsed().as_millis());
 
+        let invalidate_fut_list_start = Instant::now();
+        print!("Creating a list of workspace invalidate futures... ");
         for cur_ws in workspaces_list {
             let ws = if self.workspaces.contains_key(&cur_ws.name) {
                 self.workspaces.get(&cur_ws.name).unwrap().clone()
@@ -78,11 +84,10 @@ impl Project {
                 );
 
                 task.await;
-
                 let state = state_clone.lock().unwrap();
                 if let Some(data) = &state.data {
                     let files: Vec<String> = serde_json::from_str(data).unwrap();
-                    let (is_dirty, new_files) = ws.invalidate(files).await;
+                    let (is_dirty, new_files) = ws.invalidate(files);
                     if is_dirty {
                         let mut new_ws = ws.clone();
                         new_ws.set_files(new_files);
@@ -96,6 +101,7 @@ impl Project {
 
             future_list.push(fut);
         }
+        println!("[{} ms]", invalidate_fut_list_start.elapsed().as_millis());
 
         let mut result_workspaces: Vec<Workspace> = vec![];
         let mut updated_workspaces: Vec<String> = vec![];
