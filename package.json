@@ -5,7 +5,7 @@
     "triples": {}
   },
   "bin": {
-    "sculpture": "dist/cli.js"
+    "scu": "dist/cli.js"
   },
   "dependencies": {
     "@node-rs/helper": "^1.0.0",

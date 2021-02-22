@@ -1,9 +1,10 @@
 use super::workspace::Workspace;
+use semver::{Version, VersionReq};
 use std::collections::VecDeque;
 use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 
-type DepMap = HashMap<String, Vec<String>>;
+type DepMap = HashMap<String, (String, Vec<(String, String)>)>;
 
 #[derive(Debug)]
 pub struct DepGraph {
@@ -31,7 +32,7 @@ impl DepGraph {
                 continue;
             }
 
-            for ws in self.inversed.get(&cur).unwrap() {
+            for (_, ws) in &self.inversed.get(&cur).unwrap().1 {
                 queue.push_back(ws.to_owned());
             }
         }
@@ -65,7 +66,7 @@ impl DepGraph {
                 return Ok(());
             }
 
-            for dep in graph.get(cur).unwrap() {
+            for (_, dep) in &graph.get(cur).unwrap().1 {
                 if workspaces.contains(dep) && !visited.contains(dep) {
                     match dfs(dep, graph, workspaces, visited, path, sorted) {
                         Ok(_) => continue,
@@ -107,6 +108,38 @@ impl DepGraph {
     }
 
     pub fn validate(&self) -> bool {
+        self.validate_versions() && self.validate_cycles()
+    }
+
+    fn validate_versions(&self) -> bool {
+        let mut dep_to_version = HashMap::new();
+
+        fn get_clean_version(version: &str) -> String {
+            version.replace("^", "").replace("~", "")
+        }
+        for (ws_name, (ws_version, _)) in &self.direct {
+            dep_to_version.insert(ws_name.clone(), get_clean_version(ws_version));
+        }
+
+        for (ws_name, (_, deps)) in &self.direct {
+            for (version, name) in deps {
+                if dep_to_version.contains_key(name) {
+                    let version_req = VersionReq::parse(version).unwrap();
+                    let version_parsed = Version::parse(dep_to_version.get(name).unwrap()).unwrap();
+                    if !version_req.matches(&version_parsed) {
+                        println!("Package \"{}\" depends on \"{}@{}\", but there is already \"{}@{}\". Only one version is allowed.", ws_name, name, version, name, dep_to_version.get(name).unwrap());
+                        return false;
+                    }
+                } else {
+                    dep_to_version.insert(name.clone(), get_clean_version(version));
+                }
+            }
+        }
+
+        true
+    }
+
+    fn validate_cycles(&self) -> bool {
         let workspaces: HashSet<String> = self.direct.keys().cloned().collect();
         match self.top_sort(workspaces) {
             Ok(_) => true,
@@ -123,11 +156,11 @@ impl DepGraph {
         for ws in workspaces {
             let mut deps = vec![];
 
-            for dep in ws.package_json.dependencies.keys() {
-                deps.push(dep.to_owned());
+            for (dep, version) in &ws.package_json.dependencies {
+                deps.push((version.to_owned(), dep.to_owned()));
             }
 
-            map.insert(ws.name.clone(), deps);
+            map.insert(ws.name.clone(), (ws.package_json.version.clone(), deps));
         }
 
         map
@@ -137,15 +170,15 @@ impl DepGraph {
         let mut map: DepMap = HashMap::new();
 
         for ws in workspaces {
-            for dep in ws.package_json.dependencies.keys() {
-                let mut deps: Vec<String>;
+            for (dep, version) in &ws.package_json.dependencies {
+                let mut deps: Vec<(String, String)>;
                 if map.contains_key(dep) {
-                    deps = map.get(dep).unwrap().to_owned();
-                    deps.push(ws.name.clone());
+                    deps = map.get(dep).unwrap().1.to_owned();
+                    deps.push((ws.package_json.version.clone(), ws.name.clone()));
                 } else {
-                    deps = vec![ws.name.clone()];
+                    deps = vec![(ws.package_json.version.clone(), ws.name.clone())];
                 }
-                map.insert(dep.clone(), deps);
+                map.insert(dep.clone(), (version.clone(), deps));
             }
         }
 
